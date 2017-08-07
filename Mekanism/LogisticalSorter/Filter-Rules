@@ -1,0 +1,24 @@
+Dark Green:
+	ore*
+	*coal
+	*dye*
+	alloy*
+	item*
+	dust*
+	Lignite (item stack)
+	log*
+	
+Dark Red:
+	dirt (item stack)
+	gravel
+	blockMarble
+	blockGranite
+	blockDiorite
+	blockLimestone
+	sandstone
+	stone*
+	blockAndesite
+	crop*
+	shard*
+	cobblestone
+	gemAmber
