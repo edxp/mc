@@ -43,9 +43,9 @@ local STR_FAIL =                        "WARNING"
 local STR_ALERT =                       "ALERT  "
 local STR_CURRENT_REDSTONE_LEVEL =      "Current redstone level                "
 local STR_CONDITIONS_NOT_MET =          "ONE OR MORE CONDITIONS ARE NOT MET    "
-local STR_UNMOUNTING_CORE =             "UNMOUNTING CORE...                    "
-local STR_UNMOUNT_SUCCESS =             "CORE HAS BEEN SUCCESSFULLY UNMOUNTED  "
-local STR_UNMOUNT_FAIL =                "FAILED TO UNMOUNT REACTOR CORE        "
+local STR_DISMOUNTING_CORE =            "DISMOUNTING CORE...                   "
+local STR_DISMOUNT_SUCCESS =            "CORE HAS BEEN SUCCESSFULLY DISMOUNTED "
+local STR_DISMOUNT_FAIL =               "FAILED TO DISMOUNT REACTOR CORE       "
 local STR_CHECK_ASAP =                  "CHECK CURRENT CONFIGURATION ASAP      "
 local STR_NOTHING =                     "                                      "
 
@@ -138,7 +138,7 @@ local function SetAlertStatus(state)
     return false
 end
 
-local function CoreUnmount()
+local function CoreDismount()
     local swingResult = false
     local swingIsOk, swingCode = robot.swing(sides.front)
 
@@ -355,15 +355,15 @@ local function main()
                 LogLine("if (pendingCoreDismount) pass\n")
                 ReactorControl(REACTOR_OFF)
 
-                UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_UNMOUNTING_CORE)
-                LogLine("Unmounting core...\n")
+                UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_DISMOUNTING_CORE)
+                LogLine("Dismounting core...\n")
 
-                if (CoreUnmount()) then
-                    UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_UNMOUNT_SUCCESS)
-                    LogLine("Unmount success\n")
+                if (CoreDismount()) then
+                    UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_DISMOUNT_SUCCESS)
+                    LogLine("Dismount success\n")
                 else
-                    UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_UNMOUNT_FAIL)
-                    LogLine("Unmount failed\n")
+                    UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_DISMOUNT_FAIL)
+                    LogLine("Dismount failed\n")
                 end
 
                 -- TODO: infinite beep loop?
