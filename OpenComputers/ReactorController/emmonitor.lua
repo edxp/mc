@@ -1,10 +1,5 @@
-local component = require("component")
-local computer = require("computer")
-local robot = require("robot")
---local event = require("event")
-local term = require("term")
 local sides = require("sides")
-local note = require("note")
+local colors = require("colors")
 
 -- Settings
 --=======================================================================
@@ -14,9 +9,20 @@ local redstoneAlertSide = sides.left
 local useInternalComparator = false
 --=======================================================================
 
+--------------------------------------------
+local component = require("component")
+local computer = require("computer")
+local robot = require("robot")
+--local event = require("event")
+local term = require("term")
+local fs = require("filesystem")
+local note = require("note")
+
 local redstone
 local animatedString = "|/-\\|/-\\"
 local animatedStringIndex = 1
+local logFilePath = "/var/log/emmonitor.log"
+--------------------------------------------
 
 -- #define... :)
 local REDSTONE_FALSE = 0
@@ -49,19 +55,39 @@ local STR_DISMOUNT_FAIL =               "FAILED TO DISMOUNT REACTOR CORE       "
 local STR_CHECK_ASAP =                  "CHECK CURRENT CONFIGURATION ASAP      "
 local STR_NOTHING =                     "                                      "
 
-local function ClearLog()
-    local logFile = io.open("/var/log/emmonitor.log", "w")
-    logFile:close()
+local logFilePath = "/var/log/emmonitor.log"
 
-    return true
+local function ClearLog()
+    local logFile = io.open(logFilePath, "w")
+
+    if (logFile ~= nil) then
+        logFile:close()
+
+        return true
+    end
+
+    return false
 end
 
 local function LogLine(str)
-    local logFile = io.open("/var/log/emmonitor.log", "a")
-    logFile:write("["..os.date().."] "..str)
-    logFile:close()
+    local logFile = io.open(logFilePath, "a")
 
-    return true
+    if (logFile ~= nil) then
+        logFile:write("["..os.date().."] "..str)
+        logFile:close()
+
+        return true
+    end
+
+    return false
+end
+
+local function CreateLogFile(isForced)
+    if ((isForced and ClearLog()) or ((not isForced) and (fs.exists(logFilePath)) and (fs.size(logFilePath) > 131072) and (ClearLog()))) then
+        return (LogLine("Log file opened\n\n"))
+    end
+
+    return false
 end
 
 local function GetInternalPower()
@@ -207,8 +233,7 @@ local function main()
 
     local isCompatible = true
 
-    ClearLog()
-    LogLine("Log file opened\n")
+    CreateLogFile(true)
 
     if (not component.isAvailable("robot")) then
         io.stderr:write("This program requires robot to run\n")
@@ -260,8 +285,10 @@ local function main()
     -- While true do - optimizaciyu v pizdu
     while (true) do
         local isConditionsOk = true
+        local notePlayed = false
 
         UpdateScreenTime()
+        CreateLogFile(false)
         LogLine("New iteration\n")
 
         -- Internal power
@@ -275,6 +302,7 @@ local function main()
 
             if (GetInternalPower() < 0.1) then
                 pendingCoreDismount = true
+                SetAlertStatus(STATUS_ALERT_HIGH)
                 LogLine("Power is BAD and below 10%\n")
             else
                 LogLine("Power is BAD\n")
@@ -352,6 +380,7 @@ local function main()
             if (pendingCoreDismount) then
                 UpdateScreenStatus(UI_CTRL_CURRENTSTATUS, STR_ALERT)
                 note.play("E5", 2) -- TODO: change tone for alert
+                notePlayed = true
                 LogLine("if (pendingCoreDismount) pass\n")
                 ReactorControl(REACTOR_OFF)
 
@@ -384,8 +413,15 @@ local function main()
 
         --computer.pullSignal()
         --event.pull(1)
+
         LogLine("Wait for sleep()\n\n")
-        os.sleep(3)
+
+        -- Remove excessive sleep
+        if (notePlayed) then
+            os.sleep(1)
+        else
+            os.sleep(3)
+        end
     end
 
     return 0
