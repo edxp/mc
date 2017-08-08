@@ -1,23 +1,27 @@
+# Filter Rules
+
 Turns out there is a better way to do this. We can use restrictive approach instead of trying to account for all the cases.
 The settings are as follows:
 
-1. Enable Auto-Eject
-2. Set default to Dark Green
-3. Define following restrictive rules (this list might expand in the future)
-Dark Red:
-	dirt (item stack)
-	gravel
-	blockMarble
-	blockGranite
-	blockDiorite
-	blockLimestone
-	sandstone
-	stone*
-	blockAndesite
-	crop*
-	shard*
-	cobblestone
-	gemAmber
+* Enable Auto-Eject
+* Set default to Dark Green
+* Define following restrictive rules (this list might expand in the future)
+
+Restricted items:
+
+* dirt (item stack)
+* gravel
+* blockMarble
+* blockGranite
+* blockDiorite
+* blockLimestone
+* sandstone
+* stone*
+* blockAndesite
+* crop*
+* shard*
+* cobblestone
+* gemAmber
 
 ---
 
