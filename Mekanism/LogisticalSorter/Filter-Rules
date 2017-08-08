@@ -1,13 +1,9 @@
-Dark Green:
-	ore*
-	*coal
-	*dye*
-	alloy*
-	item*
-	dust*
-	Lignite (item stack)
-	log*
-	
+Turns out there is a better way to do this. We can use restrictive approach instead of trying to account for all the cases.
+The settings are as follows:
+
+1. Enable Auto-Eject
+2. Set default to Dark Green
+3. Define following restrictive rules (this list might expand in the future)
 Dark Red:
 	dirt (item stack)
 	gravel
@@ -22,3 +18,7 @@ Dark Red:
 	shard*
 	cobblestone
 	gemAmber
+
+---
+
+Logistical pipes chose the shortest path available so the first empty `bin` will be the one chosen. Only if the non-empty bin with the corresponding material inside is the closest will it be used. Thus it makes sense to design a system where path to each bin is more or less equal, so an empty bin is never chosen over a partially filled one for a given mat.
