@@ -290,6 +290,7 @@ local function main()
         UpdateScreenTime()
         CreateLogFile(false)
         LogLine("New iteration\n")
+        LogLine("Free memory:"..tostring(computer.freeMemory()).."\n")
 
         -- Internal power
         -------
