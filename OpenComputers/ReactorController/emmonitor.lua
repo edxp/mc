@@ -3,8 +3,8 @@ local colors = require("colors")
 
 -- Settings
 --=======================================================================
-local requiredRedstoneLevel = 8
-local redstoneComparatorSide = sides.back
+local requiredRedstoneLevel = 13
+local redstoneComparatorSide = sides.right
 local redstoneAlertSide = sides.left
 local useInternalComparator = false
 --=======================================================================

@@ -22,6 +22,8 @@ Restricted items:
 * shard*
 * cobblestone
 * gemAmber
+* dustSalt
+* oreIllmenite
 
 ---
 

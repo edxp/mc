@@ -36,7 +36,7 @@ while (true) do
     robot.useDown()
 
     -- Wait for growth a bit
-    os.sleep(0.3)
+    os.sleep(0.1)
 
     -- Suck cotton
     robot.suckDown()
@@ -53,7 +53,4 @@ while (true) do
 
     -- Unequip
     component.inventory_controller.equip()
-
-    -- Wait a bit
-    os.sleep(0.3)
 end
