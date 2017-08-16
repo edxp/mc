@@ -35,7 +35,7 @@ local STATUS_ALERT_HIGH = 103
 
 local UI_CTRL_POWER = 200
 local UI_CTRL_TOOL = 201
-local UI_CTRL_SPACE = 202
+local UI_CTRL_TIME = 202
 local UI_CTRL_ELECTROMAGNETS = 203
 local UI_CTRL_ALERT = 204
 local UI_CTRL_CURRENTSTATUS = 205
@@ -52,10 +52,14 @@ local STR_CONDITIONS_NOT_MET =          "ONE OR MORE CONDITIONS ARE NOT MET    "
 local STR_DISMOUNTING_CORE =            "DISMOUNTING CORE...                   "
 local STR_DISMOUNT_SUCCESS =            "CORE HAS BEEN SUCCESSFULLY DISMOUNTED "
 local STR_DISMOUNT_FAIL =               "FAILED TO DISMOUNT REACTOR CORE       "
+local STR_MOUNTING_CORE =               "MOUNTING CORE...                      "
+local STR_MOUNT_SUCCESS =               "CORE HAS BEEN SUCCESSFULLY MOUNTED    "
+local STR_MOUNT_FAIL =                  "FAILED TO MOUNT REACTOR CORE          "
 local STR_CHECK_ASAP =                  "CHECK CURRENT CONFIGURATION ASAP      "
 local STR_NOTHING =                     "                                      "
 
 local logFilePath = "/var/log/emmonitor.log"
+local fusionReactorCoreName = "NuclearCraft:fusionReactor"
 
 local function ClearLog()
     local logFile = io.open(logFilePath, "w")
@@ -113,6 +117,26 @@ local function CheckInventorySpace()
     return false
 end
 
+local function ClearInventoryFromUnnecessaryItems()
+    local totalItemsDropped = 0
+
+    for currentSlot = 1, 16, 1 do
+        local currentItemCount = robot.count(currentSlot)
+
+        if (currentItemCount > 0) then
+            local itemDescriptor = component.inventory_controller.getStackInInternalSlot(currentSlot)
+
+            if ((itemDescriptor ~= nil) and (itemDescriptor.name ~= fusionReactorCoreName)) then
+                robot.select(currentSlot)
+                robot.drop(currentItemCount)
+                totalItemsDropped = totalItemsDropped + currentItemCount
+            end
+        end
+    end
+
+    return totalItemsDropped
+end
+
 -- Use normal or comparator signals
 local function GetCurrentRedstoneLevel()
     if (useInternalComparator) then
@@ -136,11 +160,11 @@ end
 
 local function ReactorControl(state)
     if (state == REACTOR_ON) then
-        redstone.setOutput(sides.front, REDSTONE_FALSE)
+        redstone.setOutput(sides.top, REDSTONE_FALSE)
 
         return true
     elseif (state == REACTOR_OFF) then
-        redstone.setOutput(sides.front, REDSTONE_TRUE)
+        redstone.setOutput(sides.top, REDSTONE_TRUE)
 
         return true
     end
@@ -166,16 +190,37 @@ end
 
 local function CoreDismount()
     local swingResult = false
-    local swingIsOk, swingCode = robot.swing(sides.front)
+    local swingIsOk, swingCode = robot.swingUp()
 
     if (swingIsOk and (swingCode == "block")) then
         swingResult = true
     end
 
     -- suck dick anyway, just in case
-    robot.suck()
+    os.sleep(0.2)
+    robot.suckUp()
 
     return swingResult
+end
+
+local function CoreMount()
+    for currentSlot = 1, 16, 1 do
+        local currentItemCount = robot.count(currentSlot)
+
+        if (currentItemCount > 0) then
+            local itemDescriptor = component.inventory_controller.getStackInInternalSlot(currentSlot)
+
+            if ((itemDescriptor ~= nil) and (itemDescriptor.name == fusionReactorCoreName)) then
+                robot.select(currentSlot)
+
+                if (robot.placeUp()) then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
 end
 
 local function ResetRedstoneOutput()
@@ -189,20 +234,18 @@ local function UpdateScreenStatus(field, status)
         term.setCursor(44, 8)
     elseif (field == UI_CTRL_TOOL) then
         term.setCursor(44, 9)
-    elseif (field == UI_CTRL_SPACE) then
-        term.setCursor(44, 10)
     elseif (field == UI_CTRL_ELECTROMAGNETS) then
-        term.setCursor(44, 11)
+        term.setCursor(44, 10)
     elseif (field == UI_CTRL_ALERT) then
-        term.setCursor(44, 12)
+        term.setCursor(44, 11)
     elseif (field == UI_CTRL_CURRENTSTATUS) then
-        term.setCursor(44, 14)
+        term.setCursor(44, 13)
     elseif (field == UI_CTRL_REDSTONELEVEL) then
-        term.setCursor(44, 15)
+        term.setCursor(44, 14)
+    elseif (field == UI_CTRL_TIME) then
+        term.setCursor(29, 15)
     elseif (field == UI_CTRL_BOTTOMBAR) then
         term.setCursor(1, 16)
-    elseif (field == UI_CTRL_TIME) then
-        term.setCursor(39, 16)
     end
 
     term.write(status, false)
@@ -212,10 +255,26 @@ local function UpdateScreenStatus(field, status)
 end
 
 local function UpdateScreenTime()
-    local onlyTime = os.date()
-    onlyTime = onlyTime:sub(#onlyTime - 7, -1)
-    
-    UpdateScreenStatus(UI_CTRL_TIME, "["..animatedString:sub(animatedStringIndex, animatedStringIndex).."] "..onlyTime)
+    local onlyIngameTime = os.date()
+    onlyIngameTime = onlyIngameTime:sub(#onlyIngameTime - 7, -1)
+
+    local seconds = math.floor(computer.uptime())
+    local minutes, hours = 0, 0
+
+    if (seconds >= 60) then
+        minutes = math.floor(seconds / 60)
+        seconds = seconds % 60
+    end
+
+    if (minutes >= 60) then
+        hours = math.floor(minutes / 60)
+        minutes = minutes % 60
+    end
+
+    local strFormatedTime = string.format("%03d:%02d:%02d/%s [%s]", hours, minutes, seconds, onlyIngameTime, animatedString:sub(animatedStringIndex, animatedStringIndex))
+
+    UpdateScreenStatus(UI_CTRL_TIME, strFormatedTime)
+
     animatedStringIndex = animatedStringIndex + 1
 
     if (animatedStringIndex > 8) then
@@ -227,7 +286,7 @@ end
 
 local function main()
     io.write("==================================================\n")
-    io.write("| Electormagnets Monitor v1.0.0 by Prodavec, 2017|\n")
+    io.write("| Electormagnets Monitor v1.0.1 by Prodavec, 2017|\n")
     io.write("==================================================\n")
     io.write("\n")
 
@@ -241,11 +300,17 @@ local function main()
     elseif (not component.isAvailable("redstone")) then
         io.stderr:write("Redstone interface has not been detected\n")
         isCompatible = false
+    elseif (not component.isAvailable("inventory_controller")) then
+        io.stderr:write("Inventory Controller has not been detected\n")
+        isCompatible = false
+    elseif (not component.isAvailable("angel")) then
+        io.stderr:write("Angel upgrade has not been detected\n")
+        isCompatible = false
     end
 
     if (not isCompatible) then
         io.write("==================================================\n")
-        LogLine("System is NOT compatible\n")
+        LogLine("System is not compatible\n")
         os.exit()
     end
 
@@ -257,8 +322,11 @@ local function main()
     -- Set STATUS_ALERT_LOW, it's already stored in S-R Latch or Data Cell
     SetAlertStatus(STATUS_ALERT_LOW)
 
+    -- Set 1st slot as default slot
+    robot.select(1)
+
     --------- Draw static elements ---------
-    io.write("----------------- SYSTEM STATUS -------------1.0.0\n")
+    io.write("----------------- SYSTEM STATUS -------------1.0.1\n")
     io.write("Required redstone level                     "..tostring(requiredRedstoneLevel).."\n")
     io.write("Electromagnets comparator input             "..sides[redstoneComparatorSide].."\n")
     io.write("Alert signal output                         "..sides[redstoneAlertSide].."\n")
@@ -269,14 +337,14 @@ local function main()
 
     io.write("Internal power\n")
     io.write("Tool\n")
-    io.write("Free inventory space\n")
     io.write("Electromagnets power\n")
     io.write("Alert status\n")
 
     io.write("\n")
 
-    io.write("Current status\n")
+    io.write("Overall system status\n")
     io.write("Current redstone level\n")
+    io.write("Uptime/current time\n")
     ----------------------------------------
 
     -- Init vars before entering loop
@@ -291,6 +359,15 @@ local function main()
         CreateLogFile(false)
         LogLine("New iteration\n")
         LogLine("Free memory:"..tostring(computer.freeMemory()).."\n")
+
+        -- Clear inventory
+        -------
+        local totalItemsDropped = ClearInventoryFromUnnecessaryItems()
+
+        if (totalItemsDropped > 0) then
+            LogLine("Dropped "..tostring(totalItemsDropped).." item(s)\n")
+        end
+        -------
 
         -- Internal power
         -------
@@ -323,20 +400,8 @@ local function main()
         end
         -------
 
-        -- Inventory space
-        -------
-        if (CheckInventorySpace()) then
-            UpdateScreenStatus(UI_CTRL_SPACE, STR_GOOD)
-            LogLine("Inventory is GOOD\n")
-        else
-            UpdateScreenStatus(UI_CTRL_SPACE, STR_BAD)
-            isConditionsOk = false
-            LogLine("Inventory is BAD\n")
-        end
-        -------
-
         -- Get current redstone level
-        UpdateScreenStatus(UI_CTRL_REDSTONELEVEL, tostring(GetCurrentRedstoneLevel()))
+        UpdateScreenStatus(UI_CTRL_REDSTONELEVEL, string.format("%d  ", GetCurrentRedstoneLevel()))
 
         -- Electromagnets power
         -------
@@ -368,17 +433,17 @@ local function main()
         -------
 
         if (isConditionsOk) then
-            -- Moved out
-            --ReactorControl(REACTOR_ON)
-
+            -- If conditions are at GOOD level we're here
             UpdateScreenStatus(UI_CTRL_CURRENTSTATUS, STR_READY)
             UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_NOTHING)
             LogLine("Conditions are GOOD\n")
         else
+            -- If conditions are at BAD level we're here
             UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_CHECK_ASAP)
             LogLine("Conditions are BAD\n")
 
             if (pendingCoreDismount) then
+                -- If conditions are at ALERT level we're here
                 UpdateScreenStatus(UI_CTRL_CURRENTSTATUS, STR_ALERT)
                 note.play("E5", 2) -- TODO: change tone for alert
                 notePlayed = true
@@ -391,6 +456,21 @@ local function main()
                 if (CoreDismount()) then
                     UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_DISMOUNT_SUCCESS)
                     LogLine("Dismount success\n")
+
+                    os.sleep(2)
+
+                    UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_MOUNTING_CORE)
+                    LogLine("Mounting core...\n")
+
+                    os.sleep(0.2)
+
+                    if (CoreMount()) then
+                        UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_MOUNT_SUCCESS)
+                        LogLine("Mount success\n")
+                    else
+                        UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_MOUNT_FAIL)
+                        LogLine("Mount failed\n")
+                    end
                 else
                     UpdateScreenStatus(UI_CTRL_BOTTOMBAR, STR_DISMOUNT_FAIL)
                     LogLine("Dismount failed\n")
@@ -408,7 +488,7 @@ local function main()
             end
         end
 
-        -- If bad conditions are good or not critical, we are here
+        -- If conditions are at WARNING level we're here because loop continues
         -- Pay attention for this
         ReactorControl(REACTOR_ON)
 
